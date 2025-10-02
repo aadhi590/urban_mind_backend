@@ -1,10 +1,14 @@
 from fastapi import FastAPI
-from app.services import fusion_service
+from app.services.correlation_service import router as correlation_router
+from app.services.fusion_service import router as fusion_router
+
 
 app = FastAPI()
 
 # Register routers
-app.include_router(fusion_service.router)
+app.include_router(fusion_router)
+app.include_router(correlation_router)
+
 
 @app.get("/")
 def root():
