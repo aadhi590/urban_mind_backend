@@ -17,3 +17,6 @@ venv/
 
 # VS Code
 .vscode/
+.env
+firebase-credentials.json
+*-credentials.json

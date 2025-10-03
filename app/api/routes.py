@@ -1,17 +1,145 @@
-from fastapi import APIRouter
-from app.services.fusion_service import fuse_data
+from fastapi import APIRouter, HTTPException
+from app.services.civic_service import (
+    create_civic_report, 
+    verify_civic_report,
+)
+from app.models.data_models import (
+    CivicReportCreate, 
+    VerificationRequest
+)
+from app.utils.firebase_config import get_firestore
 
 router = APIRouter()
 
-@router.post("/fuse")
-async def fuse_endpoint(payload: dict):
+# =========================================================
+# OBJECTIVE 2: CIVIC INTELLIGENCE
+# =========================================================
+
+@router.post("/civic/report")
+async def create_report(report: CivicReportCreate):
     """
-    Accepts multiple datasets from different sources and returns fused intelligence.
-    Example payload:
-    {
-        "traffic": [{"id": 1, "location": "MG Road", "status": "jam"}],
-        "public_reports": [{"id": "r1", "text": "Traffic jam at MG Road"}]
-    }
+    📸 Create a new civic report.
     """
-    result = fuse_data(payload)
-    return {"fused_insight": result}
+    try:
+        response = await create_civic_report(report)
+        if not response.success:
+            raise HTTPException(status_code=400, detail=response.message)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report creation failed: {str(e)}")
+
+
+@router.post("/civic/verify")
+async def verify_report(verification: VerificationRequest):
+    """
+    ✅ Community verification for a civic report.
+    """
+    try:
+        response = await verify_civic_report(verification)
+        if not response.success:
+            raise HTTPException(status_code=400, detail=response.message)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+
+@router.get("/civic/reports")
+async def get_all_reports(status: str = None, category: str = None, limit: int = 50):
+    """
+    📋 Get all civic reports with optional filters.
+    """
+    try:
+        db = get_firestore()
+        if not db:
+            raise HTTPException(status_code=503, detail="Database not available")
+            
+        query = db.collection("civic_reports")
+        
+        if status:
+            query = query.where("status", "==", status)
+        if category:
+            query = query.where("category", "==", category)
+        
+        docs = query.limit(limit).stream()
+        
+        reports_list = []
+        for doc in docs:
+            report_data = doc.to_dict()
+            report_data["id"] = doc.id
+            if "created_at" in report_data:
+                report_data["created_at"] = str(report_data["created_at"])
+            if "escalated_at" in report_data and report_data.get("escalated_at"):
+                report_data["escalated_at"] = str(report_data["escalated_at"])
+            reports_list.append(report_data)
+            
+        return {
+            "success": True,
+            "count": len(reports_list),
+            "reports": reports_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch reports: {str(e)}")
+
+
+@router.get("/civic/report/{report_id}")
+async def get_report_details(report_id: str):
+    """
+    🔍 Get specific report details by its ID.
+    """
+    try:
+        db = get_firestore()
+        if not db:
+            raise HTTPException(status_code=503, detail="Database not available")
+            
+        report_ref = db.collection("civic_reports").document(report_id)
+        report = report_ref.get()
+
+        if not report.exists:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+        report_data = report.to_dict()
+        report_data["id"] = report.id
+        if "created_at" in report_data:
+            report_data["created_at"] = str(report_data["created_at"])
+        if "escalated_at" in report_data and report_data.get("escalated_at"):
+            report_data["escalated_at"] = str(report_data["escalated_at"])
+        
+        return {
+            "success": True,
+            "report": report_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch report details: {str(e)}")
+
+
+@router.get("/civic/user/{user_id}/stats")
+async def get_user_statistics(user_id: str):
+    """
+    🏆 Get a user's CityMind points and reporting stats.
+    """
+    try:
+        db = get_firestore()
+        if not db:
+            raise HTTPException(status_code=503, detail="Database not available")
+            
+        user = db.collection("users").document(user_id).get()
+        
+        if not user.exists:
+            return {
+                "success": True,
+                "user_id": user_id,
+                "total_points": 0,
+                "reports_created": 0,
+                "verifications_done": 0
+            }
+        
+        user_data = user.to_dict()
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "total_points": user_data.get("total_points", 0),
+            "last_action": user_data.get("last_action", "None")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get user stats: {str(e)}")
