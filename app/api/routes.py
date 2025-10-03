@@ -143,3 +143,73 @@ async def get_user_statistics(user_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get user stats: {str(e)}")
+
+
+# =========================================================
+# OBJECTIVE 3: ENVIRONMENTAL INTELLIGENCE
+# =========================================================
+
+@router.get("/environment/air-quality")
+async def get_air_quality_endpoint(area: str = None):
+    """Get real-time air quality for an area"""
+    from app.services.environmental_service import get_air_quality
+    try:
+        data = await get_air_quality(area)
+        return {"success": True, "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/environment/air-quality/all")
+async def get_all_air_quality():
+    """Get AQI for all Bengaluru areas"""
+    from app.services.environmental_service import get_all_areas_aqi
+    try:
+        data = await get_all_areas_aqi()
+        return {"success": True, "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/environment/water-quality")
+async def get_water_quality_endpoint(lake_name: str = None):
+    """Get water quality for a lake"""
+    from app.services.environmental_service import get_water_quality
+    try:
+        data = await get_water_quality(lake_name)
+        return {"success": True, "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/environment/water-quality/all")
+async def get_all_water_quality():
+    """Get water quality for all lakes"""
+    from app.services.environmental_service import get_all_lakes_quality
+    try:
+        data = await get_all_lakes_quality()
+        return {"success": True, "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/environment/health-alert/{area}")
+async def get_health_alert(area: str):
+    """Get AI-powered health alert for an area"""
+    from app.services.environmental_service import get_combined_alert
+    try:
+        data = await get_combined_alert(area)
+        return {"success": True, "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/environment/heatmap")
+async def get_heatmap():
+    """Get environmental pollution heatmap"""
+    from app.services.environmental_service import get_environmental_heatmap
+    try:
+        data = await get_environmental_heatmap()
+        return {"success": True, "count": len(data), "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

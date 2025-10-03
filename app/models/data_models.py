@@ -1,69 +1,127 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
-class CivicCategory(str, Enum):
-    POTHOLE = "Road Maintenance - Pothole"
-    GARBAGE = "Waste Management - Garbage"
-    STREETLIGHT = "Infrastructure - Street Light"
-    WATER_LEAK = "Water Supply - Leak"
-    DRAINAGE = "Drainage - Blockage"
-    TRAFFIC_SIGNAL = "Traffic - Signal Issue"
-    ENCROACHMENT = "Encroachment - Illegal"
-    OTHER = "Other"
 
+# -----------------------------
+# Air Quality Models
+# -----------------------------
+class AQILevel(str, Enum):
+    GOOD = "Good"
+    MODERATE = "Moderate"
+    UNHEALTHY_SENSITIVE = "Unhealthy for Sensitive Groups"
+    UNHEALTHY = "Unhealthy"
+    VERY_UNHEALTHY = "Very Unhealthy"
+    HAZARDOUS = "Hazardous"
+
+
+class AirQualityData(BaseModel):
+    area: str
+    aqi: int
+    pm25: float
+    pm10: float
+    level: str
+    color: str
+    health_advisory: str
+    timestamp: datetime
+
+
+class WaterQualityData(BaseModel):
+    lake_name: str
+    ph: float
+    contamination_level: str
+    turbidity: float
+    dissolved_oxygen: float
+    color: str
+    safe_for_use: bool
+    timestamp: datetime
+
+
+class HealthAlert(BaseModel):
+    alert_type: str
+    severity: str
+    area: str
+    message: str
+    recommendations: List[str]
+    timestamp: datetime
+
+
+class EnvironmentalHeatmap(BaseModel):
+    latitude: float
+    longitude: float
+    aqi: int
+    pollution_level: str
+    color: str
+
+
+# -----------------------------
+# Civic Report Models
+# -----------------------------
 class PriorityLevel(str, Enum):
     LOW = "Low"
     MEDIUM = "Medium"
     HIGH = "High"
     CRITICAL = "Critical"
 
-class VerificationStatus(str, Enum):
-    PENDING = "Pending"
-    VERIFIED = "Verified"
-    REJECTED = "Rejected"
-    ESCALATED = "Escalated"
+
+class CivicCategory(str, Enum):
+    WASTE_MANAGEMENT = "Waste Management"
+    ROAD_DAMAGE = "Road Damage"
+    WATER_LOGGING = "Water Logging"
+    AIR_POLLUTION = "Air Pollution"
+    NOISE_POLLUTION = "Noise Pollution"
+    PUBLIC_SAFETY = "Public Safety"
+    OTHER = "Other"
+
 
 class CivicReportCreate(BaseModel):
-    """Request model for creating a civic report"""
-    user_id: str
-    latitude: float
-    longitude: float
-    description: Optional[str] = ""
-    image_base64: str  # Base64 encoded image from Flutter
-
-class CivicReport(BaseModel):
-    """Complete civic report model"""
-    id: str
-    user_id: str
-    latitude: float
-    longitude: float
-    location_name: str
+    title: str
     description: str
-    image_url: str
+    location: str
+    reported_by: str
     category: CivicCategory
-    priority: PriorityLevel
-    status: VerificationStatus
-    verification_count: int = 0
-    verified_by: List[str] = []
-    created_at: datetime
-    escalated_at: Optional[datetime] = None
-    resolved_at: Optional[datetime] = None
+    priority: PriorityLevel = PriorityLevel.MEDIUM
+    timestamp: datetime = datetime.utcnow()
 
-class VerificationRequest(BaseModel):
-    """Request model for citizen verification"""
-    report_id: str
-    user_id: str
-    is_valid: bool  # True = confirm, False = reject
+
+class CivicReportUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    resolved: Optional[bool] = None
+    priority: Optional[PriorityLevel] = None
+
+
+class CivicReport(CivicReportCreate):
+    id: int
+    resolved: bool = False
+
 
 class CivicReportResponse(BaseModel):
-    """Response after creating/verifying report"""
-    success: bool
-    report_id: str
-    category: str
-    priority: str
-    status: str
-    verification_count: int
-    message: str
-    points_earned: Optional[int] = 0
+    id: int
+    title: str
+    description: str
+    location: str
+    reported_by: str
+    category: CivicCategory
+    priority: PriorityLevel
+    resolved: bool
+    timestamp: datetime
+
+
+# -----------------------------
+# Verification Models
+# -----------------------------
+class VerificationStatus(str, Enum):
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
+class VerificationRequest(BaseModel):
+    user_id: str
+    document_type: str   # e.g., "Aadhar", "Voter ID", "Driving License"
+    document_number: str
+    submitted_at: datetime = datetime.utcnow()
+    status: VerificationStatus = VerificationStatus.PENDING
